@@ -2,21 +2,33 @@ require 'formula'
 
 class Freeciv < Formula
   homepage 'http://freeciv.wikia.com'
-  url 'https://downloads.sourceforge.net/project/freeciv/Freeciv%202.3/2.3.1/freeciv-2.3.1.tar.bz2'
-  sha1 '9d9ee9f48f4c945fc6525139d340443d5a25aac4'
+  url 'https://downloads.sourceforge.net/project/freeciv/Freeciv%202.4/2.4.3/freeciv-2.4.3.tar.bz2'
+  sha1 'ed7473e28c53e4bfbfc2535c15c7ef17d4e34204'
   head 'svn://svn.gna.org/svn/freeciv/trunk'
 
-  option 'disable-nls', 'Disable NLS support'
+  option 'disable-nls' , 'Disable NLS support'
+  option 'disable-sdl' , 'Disable the SDL Freeciv client'
+  option 'disable-gtk' , 'Disable the GTK Freeciv client'
+  option 'enable-gtk3' , 'Enable the GTK3 Freeciv client'
 
   depends_on 'pkg-config' => :build
-  # depends on readline functionality that libedit didn't provide
-  # prior to Snow Leopard
-  depends_on 'readline' if MacOS.version < :snow_leopard
-  depends_on 'sdl'
-  depends_on 'sdl_image'
-  depends_on 'sdl_mixer'
+  depends_on 'readline'
   depends_on :x11
   depends_on 'gettext' unless build.include? 'disable-nls'
+
+  if !build.include? 'disable-sdl'
+    depends_on 'sdl'
+    depends_on 'sdl_image'
+    depends_on 'sdl_mixer'
+  end
+  if !build.include? 'disable-gtk'
+    depends_on 'glib'
+    depends_on 'gtk+'
+  end
+  if build.include? 'enable-gtk3'
+    depends_on 'glib'
+    depends_on 'gtk+3'
+  end
 
   def install
     args = ["--disable-debug", "--disable-dependency-tracking",
@@ -30,6 +42,17 @@ class Freeciv < Formula
       args << "LDFLAGS=-L#{gettext.lib}"
     end
 
+    build_client = []
+    if !build.include? 'disable-sdl'
+      build_client << "sdl"
+    end
+    if !build.include? 'disable-gtk'
+      build_client << "gtk"
+    end
+    if build.include? 'enable-gtk3'
+      build_client << "gtk3"
+    end
+    args << "--enable-client=" + build_client.join(",") unless build_client.empty?
     system "./configure", *args
     system "make", "install"
   end
